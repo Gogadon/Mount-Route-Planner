@@ -1,5 +1,8 @@
-MRP_DB = MRP_DB or {}
-MRP = MRP or {}
+-- MRP_UI.lua
+local _, MRP = ...
+
+local L = MRP.L
+
 local UI = {}
 MRP.UI = UI
 
@@ -237,7 +240,7 @@ helpBtn:SetScript("OnClick", function()
             self:GetParent():Hide()
         end,
     }
-    
+
     StaticPopup_Show("MOUNT_ROUTE_PLANNER_HELP")
 end)
 
@@ -283,21 +286,38 @@ animFrame:SetScript("OnUpdate", function(self, elapsed)
     end
 end)
 
+local knownItemIds = {
+    ["Hearthstone"] = 6948,
+    ["Garrison Hearthstone"] = 110560,
+    ["Dalaran Hearthstone"] = 140192,
+}
+
+local itemMissingReportedCache = {}
+
 function UI:ShowCenterUseItemButton(itemName)
     local btn = centerAction
 
-    btn.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-
-    local itemID = select(1, GetItemInfoInstant(itemName))
-    if itemID then
-        local _, _, _, _, _, _, _, _, _, icon = GetItemInfo(itemID)
-        if icon then
-            btn.icon:SetTexture(icon)
-        end
+    local itemID = select(1, C_Item.GetItemInfoInstant(itemName))
+    if not itemID and knownItemIds[itemName] then
+        itemID = knownItemIds[itemName]
     end
 
-    btn:SetAttribute("macrotext", "/use " .. itemName)
-    btn:Show()
+    if itemID then
+        local name, _, _, _, _, _, _, _, _, icon = C_Item.GetItemInfo(itemID)
+        if name then
+            if icon then
+                btn.icon:SetTexture(icon)
+            else
+                btn.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+            end
+
+            btn:SetAttribute("macrotext", "/use " .. name)
+            btn:Show()
+        end
+    elseif not itemMissingReportedCache[itemName] then
+        itemMissingReportedCache[itemName] = true
+        print("|cffffcc00[MRP]|r " .. format(L["Item not found: '%s', please report it."], itemName))
+    end
 end
 
 function UI:HideCenterAction()
@@ -313,19 +333,27 @@ function UI:ShowHide()
     end
 end
 
+local tomtomIds = {}
+local hasTrackedWaypoint = false
+
 function UI:UpdateDisplay()
     local steps = MRP.parsedSteps or {}
     local idx = MRP.currentIndex or 1
     local step = steps[idx]
 
-    MRP.UI:HideCenterAction()
+    self:HideCenterAction()
 
-    if MRP_DB.useTomTom and SlashCmdList.TOMTOM_WAY then
-        local currentZoneName = GetZoneText()
-        SlashCmdList.TOMTOM_WAY("reset " .. currentZoneName)
-    else
+    if TomTom and TomTom["RemoveWaypoint"] then
+        for _, id in ipairs(tomtomIds) do
+            TomTom:RemoveWaypoint(id)
+        end
+        tomtomIds = {}
+    end
+
+    if hasTrackedWaypoint then
         C_Map.ClearUserWaypoint()
         C_SuperTrack.SetSuperTrackedUserWaypoint(false)
+        hasTrackedWaypoint = false
     end
 
     if MRPFrame.rewardIcons then
@@ -391,14 +419,14 @@ function UI:UpdateDisplay()
         frame.stepText:SetText(format(L["Kill %s"], step.npc))
     elseif step.item then
         frame.stepText:SetText(format(L["Use %s"], step.item))
-        MRP.UI:ShowCenterUseItemButton(step.item)
+        self:ShowCenterUseItemButton(step.item)
     elseif step.flyTo then
         frame.stepText:SetText(format(L["Fly to %s"], step.flyTo))
     elseif step.portal then
         frame.stepText:SetText(format(L["Take Portal to %s"], step.portal))
     elseif step.hearthstone then
         frame.stepText:SetText(format(L["Use Hearthstone to %s"], step.hearthstone))
-        MRP.UI:ShowCenterUseItemButton("Hearthstone")
+        self:ShowCenterUseItemButton("Hearthstone")
 
         if GetBindLocation() ~= step.hearthstone then
             warningText = L["Your Hearthstone is set to a different location!"]
@@ -417,39 +445,47 @@ function UI:UpdateDisplay()
 
     if step.location then
         local label = step.label or L["Unknown"]
-        if MRP_DB.useTomTom and SlashCmdList.TOMTOM_WAY then
-            local locX = step.location.x
-            if locX < 1 then
-                locX = locX * 100
-            end
-            
-            local locY = step.location.y
-            if locY < 1 then
-                locY = locY * 100
-            end
 
-            SlashCmdList.TOMTOM_WAY(step.location.mapName .. " " .. locX .. " " .. locY .. " " .. label)
+        local locX = step.location.x
+        if (locX >= 1) then
+            locX = locX / 100
+        end
+
+        local locY = step.location.y
+        if (locY >= 1) then
+            locY = locY / 100
+        end
+
+        local locStr = (step.location.mapName or "Unknown Map") .. " (" .. (step.location.mapID or 0) .. ")"
+
+        if not step.location.mapID then
+            step.location.mapID = MRP.Data.mapNamesToIds[step.location.mapName] or 0
+            if not step.location.mapID or step.location.mapID == 0 then
+                print("|cffffcc00[MRP]|r " .. format(L["Map ID not found for: '%s', please report it."], locStr))
+                step.location.mapID = 0
+            end
+        end
+
+        if MRP_DB.useTomTom and TomTom and TomTom["AddWaypoint"] then
+            local uid = TomTom:AddWaypoint(
+                step.location.mapID,
+                locX,
+                locY,
+                {
+                    title = label,
+                    source = "Mount Route Planner",
+                    persistent = false,
+                    minimap = true,
+                    world = true,
+                    silent = true,
+                }
+            )
+            if uid then
+                table.insert(tomtomIds, uid)
+            else
+                print("|cffffcc00[MRP]|r " .. format(L["Failed to add TomTom waypoint for: '%s', please report it."], locStr))
+            end
         else
-            local locX = step.location.x
-            if (locX >= 1) then
-                locX = locX / 100
-            end
-
-            local locY = step.location.y
-            if (locY >= 1) then
-                locY = locY / 100
-            end
-
-            local locStr = (step.location.mapName or "Unknown Map") .. " (" .. (step.location.mapID or 0) .. ")"
-
-            if not step.location.mapID then
-                step.location.mapID = MRP.Data.mapNamesToIds[step.location.mapName] or 0
-                if not step.location.mapID or step.location.mapID == 0 then
-                    print("|cffffcc00[MRP]|r " .. format(L["Map ID not found for: '%s', please report it."], locStr))
-                    step.location.mapID = 0
-                end
-            end
-
             if type(step.location.mapID) ~= "number" then
                 print("|cffffcc00[MRP]|r " .. format(L["Invalid map ID for: '%s', please report it."], locStr))
             end
@@ -463,12 +499,13 @@ function UI:UpdateDisplay()
             if C_Map.CanSetUserWaypointOnMap(step.location.mapID) then
                 C_Map.SetUserWaypoint(coords)
                 C_SuperTrack.SetSuperTrackedUserWaypoint(true)
+                hasTrackedWaypoint = true
             elseif step.location.mapID ~= 582 and step.location.mapID ~= 627 then
                 print("|cffffcc00[MRP]|r " .. format(L["Cannot set waypoint on map: '%s', please report it."], locStr))
             end
         end
     end
-    
+
     local totalIconsForStep = 0
     for _, r in ipairs(step.rewards or {}) do
         if r.boss and r.mount then
@@ -500,6 +537,7 @@ function UI:UpdateDisplay()
             icon:SetDesaturated(isDead or isCollected)
 
             icon:SetScript("OnEnter", function()
+                ---@diagnostic disable-next-line: param-type-mismatch
                 GameTooltip:SetOwner(icon, "ANCHOR_RIGHT")
                 GameTooltip:AddLine(reward.boss or L["Unknown Boss"], 1, 1, 1)
                 if reward.note then
