@@ -286,13 +286,31 @@ function MRP_IsCorrectDifficulty(neededDiffString)
 end
 
 function MRP_MatchesDifficulty(neededDiffString, diffID)
-    if neededDiffString == "Heroic 25 only" then
-        return diffID == 6 or diffID == 4
-    elseif neededDiffString == "Heroic only" then
-        return diffID == 2 or diffID == 5 or diffID == 6 or diffID == 4
-    elseif neededDiffString == "Mythic only" then
-        return diffID == 23 or diffID == 16
+    -- This function checks whether the current difficulty ID (number) matches the request text.
+    -- We use string.find() so that it also works if there is more text in the note.
+
+    if neededDiffString:find("Heroic 25 only") then
+        -- Especially for WotLK mounts like Invincible.
+        -- ID 6 = 25-Player Heroic
+        return diffID == 6
+
+    elseif neededDiffString:find("Heroic only") then
+        -- Covers ALL types of “Heroic”.
+        -- ID 2 = Dungeon Heroic
+        -- ID 5 = 10-player Raid Heroic (WotLK/Cata)
+        -- ID 6 = 25-player Raid Heroic (WotLK/Cata)
+        -- ID 15 = Heroic Raid (Flex, from MoP)
+        return diffID == 2 or diffID == 5 or diffID == 6 or diffID == 15
+
+    elseif neededDiffString:find("Mythic only") then
+        -- Covers ALL types of “Mythic”.
+        -- ID 16 = Mythic Raid
+        -- ID 23 = Mythic Dungeon
+        return diffID == 16 or diffID == 23
     end
+
+    -- If no specific requirement is found in the note (e.g. for normal mounts),
+    -- we return ‘true’, as the difficulty is then irrelevant.
     return true
 end
 
@@ -363,9 +381,10 @@ function MRP_CheckCurrentStepComplete(force)
 end
 
 local StepWatcher = CreateFrame("Frame")
+-- We are now listening for ALL relevant zone events to be sure.
 StepWatcher:RegisterEvent("ZONE_CHANGED")
 StepWatcher:RegisterEvent("ZONE_CHANGED_INDOORS")
-StepWatcher:RegisterEvent("ZONE_CHANGED_NEW_AREA")
+StepWatcher:RegisterEvent("ZONE_CHANGED_NEW_AREA") 
 StepWatcher:RegisterEvent("BAG_UPDATE_COOLDOWN")
 StepWatcher:RegisterEvent("PLAYER_REGEN_ENABLED")
 StepWatcher:RegisterEvent("NEW_MOUNT_ADDED")
@@ -373,6 +392,57 @@ StepWatcher:RegisterEvent("UPDATE_INSTANCE_INFO")
 StepWatcher:RegisterEvent("PLAYER_LEAVE_COMBAT")
 
 StepWatcher:SetScript("OnEvent", function(_, event)
+    -- Check whether the event is one of our zone change events
+    if event == "ZONE_CHANGED_INDOORS" or event == "ZONE_CHANGED" or event == "ZONE_CHANGED_NEW_AREA" then
+        -- Hide the warning when we are not (or no longer) in an instance.
+        if not IsInInstance() then
+            MRP.UI:HideDifficultyWarning()
+            return -- End the function here, as further checks are pointless.
+        end
+
+        local step = MRP.parsedSteps and MRP.parsedSteps[MRP.currentIndex]
+        if step and step.instance then
+            local unmetRequirements = {}
+            -- Check all rewards in the current step
+            for _, reward in ipairs(step.rewards or {}) do
+                if not MRP_GetMountCollectedByName(reward.mount) and reward.note and reward.note ~= "" then
+                    local neededDiffString = nil
+                    
+                    if reward.note:find("Mythic only") then
+                        neededDiffString = "Mythic only"
+                    elseif reward.note:find("Heroic 25 only") then
+                        neededDiffString = "Heroic 25 only"
+                    elseif reward.note:find("Heroic only") then
+                        neededDiffString = "Heroic only"
+                    end
+
+                    if neededDiffString and not MRP_IsCorrectDifficulty(neededDiffString) then
+                        local diffText = neededDiffString
+                        if diffText == "Heroic 25 only" then
+                            diffText = L["Heroic 25"]
+                        else
+                            diffText = diffText:gsub(" only", "")
+                        end
+                        unmetRequirements[diffText] = true
+                    end
+                end
+            end
+
+            local warningString = ""
+            for req, _ in pairs(unmetRequirements) do
+                warningString = warningString .. req .. ", "
+            end
+
+            if warningString ~= "" then
+                warningString = warningString:sub(1, -3) -- Remove last comma
+                MRP.UI:ShowDifficultyWarning(warningString)
+            else
+                MRP.UI:HideDifficultyWarning()
+            end
+        end
+    end
+
+    -- This is the original auto-progress logic that applies to all events.
     MRP_CheckCurrentStepComplete(false)
 end)
 
