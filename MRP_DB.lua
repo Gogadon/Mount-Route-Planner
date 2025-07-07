@@ -6,5 +6,5 @@ MRP_DB = {
     currentIndex_H = 0,
     autoSkip = true,
     autoAdvance = true,
-    useTomTom = false,
+    useTomTom = true,
 }

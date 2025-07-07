@@ -12,7 +12,6 @@ MRP.L = {
     ["This will create waypoints for each step in your route."] = "This will create waypoints for each step in your route.",
     ["You must have TomTom installed for this to work."] = "You must have TomTom installed for this to work.",
     ["You can toggle this setting at any time."] = "You can toggle this setting at any time.",
-    ["Note: TomTom will print messages in chat occasionally."] = "Note: TomTom will print messages in chat occasionally.",
 
     ["|cff00ff00[MRP]|r TomTom usage is now: %s"] = "|cff00ff00[MRP]|r TomTom usage is now: %s",
     ["|cff00ff00ENABLED|r"] = "|cff00ff00ENABLED|r",
@@ -93,6 +92,7 @@ MRP.L = {
     ["Unknown action: '%s', please report it."] = "Unknown action: '%s', please report it.",
 
     ["Map ID not found for: '%s', please report it."] = "Map ID not found for: '%s', please report it.",
+    ["Failed to add TomTom waypoint for: '%s', please report it."] = "Failed to add TomTom waypoint for: '%s', please report it.",
     ["Invalid map ID for: '%s', please report it."] = "Invalid map ID for: '%s', please report it.",
     ["Invalid coordinates for: '%s', please report it."] = "Invalid coordinates for: '%s', please report it.",
     ["Cannot set waypoint on map: '%s', please report it."] = "Cannot set waypoint on map: '%s', please report it.",

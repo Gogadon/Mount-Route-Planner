@@ -333,6 +333,9 @@ function UI:ShowHide()
     end
 end
 
+local tomtomIds = {}
+local hasTrackedWaypoint = false
+
 function UI:UpdateDisplay()
     local steps = MRP.parsedSteps or {}
     local idx = MRP.currentIndex or 1
@@ -340,12 +343,17 @@ function UI:UpdateDisplay()
 
     self:HideCenterAction()
 
-    if MRP_DB.useTomTom and SlashCmdList.TOMTOM_WAY then
-        local currentZoneName = GetZoneText()
-        SlashCmdList.TOMTOM_WAY("reset " .. currentZoneName)
-    else
+    if TomTom and TomTom["RemoveWaypoint"] then
+        for _, id in ipairs(tomtomIds) do
+            TomTom:RemoveWaypoint(id)
+        end
+        tomtomIds = {}
+    end
+
+    if hasTrackedWaypoint then
         C_Map.ClearUserWaypoint()
         C_SuperTrack.SetSuperTrackedUserWaypoint(false)
+        hasTrackedWaypoint = false
     end
 
     if MRPFrame.rewardIcons then
@@ -437,39 +445,47 @@ function UI:UpdateDisplay()
 
     if step.location then
         local label = step.label or L["Unknown"]
-        if MRP_DB.useTomTom and SlashCmdList.TOMTOM_WAY then
-            local locX = step.location.x
-            if locX < 1 then
-                locX = locX * 100
-            end
 
-            local locY = step.location.y
-            if locY < 1 then
-                locY = locY * 100
-            end
+        local locX = step.location.x
+        if (locX >= 1) then
+            locX = locX / 100
+        end
 
-            SlashCmdList.TOMTOM_WAY(step.location.mapName .. " " .. locX .. " " .. locY .. " " .. label)
+        local locY = step.location.y
+        if (locY >= 1) then
+            locY = locY / 100
+        end
+
+        local locStr = (step.location.mapName or "Unknown Map") .. " (" .. (step.location.mapID or 0) .. ")"
+
+        if not step.location.mapID then
+            step.location.mapID = MRP.Data.mapNamesToIds[step.location.mapName] or 0
+            if not step.location.mapID or step.location.mapID == 0 then
+                print("|cffffcc00[MRP]|r " .. format(L["Map ID not found for: '%s', please report it."], locStr))
+                step.location.mapID = 0
+            end
+        end
+
+        if MRP_DB.useTomTom and TomTom and TomTom["AddWaypoint"] then
+            local uid = TomTom:AddWaypoint(
+                step.location.mapID,
+                locX,
+                locY,
+                {
+                    title = label,
+                    source = "Mount Route Planner",
+                    persistent = false,
+                    minimap = true,
+                    world = true,
+                    silent = true,
+                }
+            )
+            if uid then
+                table.insert(tomtomIds, uid)
+            else
+                print("|cffffcc00[MRP]|r " .. format(L["Failed to add TomTom waypoint for: '%s', please report it."], locStr))
+            end
         else
-            local locX = step.location.x
-            if (locX >= 1) then
-                locX = locX / 100
-            end
-
-            local locY = step.location.y
-            if (locY >= 1) then
-                locY = locY / 100
-            end
-
-            local locStr = (step.location.mapName or "Unknown Map") .. " (" .. (step.location.mapID or 0) .. ")"
-
-            if not step.location.mapID then
-                step.location.mapID = MRP.Data.mapNamesToIds[step.location.mapName] or 0
-                if not step.location.mapID or step.location.mapID == 0 then
-                    print("|cffffcc00[MRP]|r " .. format(L["Map ID not found for: '%s', please report it."], locStr))
-                    step.location.mapID = 0
-                end
-            end
-
             if type(step.location.mapID) ~= "number" then
                 print("|cffffcc00[MRP]|r " .. format(L["Invalid map ID for: '%s', please report it."], locStr))
             end
@@ -483,6 +499,7 @@ function UI:UpdateDisplay()
             if C_Map.CanSetUserWaypointOnMap(step.location.mapID) then
                 C_Map.SetUserWaypoint(coords)
                 C_SuperTrack.SetSuperTrackedUserWaypoint(true)
+                hasTrackedWaypoint = true
             elseif step.location.mapID ~= 582 and step.location.mapID ~= 627 then
                 print("|cffffcc00[MRP]|r " .. format(L["Cannot set waypoint on map: '%s', please report it."], locStr))
             end

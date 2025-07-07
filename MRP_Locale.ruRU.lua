@@ -17,7 +17,6 @@ MRP.L = {
     ["This will create waypoints for each step in your route."] = "Это создаст путевые точки для каждого шага вашего маршрута.",
     ["You must have TomTom installed for this to work."] = "Для работы необходимо установить TomTom.",
     ["You can toggle this setting at any time."] = "Эту настройку можно переключать в любое время.",
-    ["Note: TomTom will print messages in chat occasionally."] = "Примечание: TomTom иногда будет выводить сообщения в чат.",
 
     ["|cff00ff00[MRP]|r TomTom usage is now: %s"] = "|cff00ff00[MRP]|r Использование TomTom теперь: %s",
     ["|cff00ff00ENABLED|r"] = "|cff00ff00ВКЛЮЧЕНО|r",
@@ -98,6 +97,7 @@ MRP.L = {
     ["Unknown action: '%s', please report it."] = "Неизвестное действие: '%s', пожалуйста, сообщите об этом.",
 
     ["Map ID not found for: '%s', please report it."] = "ID карты не найден для: '%s', пожалуйста, сообщите об этом.",
+    ["Failed to add TomTom waypoint for: '%s', please report it."] = "Не удалось добавить путевую точку TomTom для: '%s', пожалуйста, сообщите об этом.",
     ["Invalid map ID for: '%s', please report it."] = "Недействительный ID карты для: '%s', пожалуйста, сообщите об этом.",
     ["Invalid coordinates for: '%s', please report it."] = "Недействительные координаты для: '%s', пожалуйста, сообщите об этом.",
     ["Cannot set waypoint on map: '%s', please report it."] = "Невозможно установить точку маршрута на карте: '%s', пожалуйста, сообщите об этом.",

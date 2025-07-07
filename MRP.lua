@@ -78,24 +78,6 @@ function MRP_NextStep()
     MRP.UI:UpdateDisplay()
 end
 
-local f = CreateFrame("Frame")
-f:RegisterEvent("PLAYER_LOGIN")
-f:SetScript("OnEvent", function()
-    if UnitFactionGroup("player") == "Alliance" then
-        if MRP_DB.parsedSteps_A then
-            MRP.parsedSteps = MRP_DB.parsedSteps_A
-            MRP.currentIndex = MRP_DB.currentIndex_A or 1
-            MRP_CheckCurrentStepComplete(false)
-        end
-    else
-        if MRP_DB.parsedSteps_H then
-            MRP.parsedSteps = MRP_DB.parsedSteps_H
-            MRP.currentIndex = MRP_DB.currentIndex_H or 1
-            MRP_CheckCurrentStepComplete(false)
-        end
-    end
-end)
-
 local specialMountIds = {
     ["Deathcharger's Reins"] = 69,
     ["Blue Qiraji Crystal"] = 117,
@@ -432,7 +414,6 @@ tomtomCheckbox:SetScript("OnEnter", function(self)
     GameTooltip:AddLine(L["This will create waypoints for each step in your route."], 1, 1, 1)
     GameTooltip:AddLine(L["You must have TomTom installed for this to work."], 1, 0.5, 0.5)
     GameTooltip:AddLine(L["You can toggle this setting at any time."], 0.5, 1, 0.5)
-    GameTooltip:AddLine(L["Note: TomTom will print messages in chat occasionally."], 1, 1, 0.5)
     GameTooltip:Show()
 end)
 
@@ -482,3 +463,22 @@ SlashCmdList["MOUNTROUTEPLANNER"] = function(msg)
         print(L[" - /mrp tomtom on|off → Enable or disable TomTom integration"])
     end
 end
+
+local f = CreateFrame("Frame")
+f:RegisterEvent("PLAYER_LOGIN")
+f:SetScript("OnEvent", function()
+    tomtomCheckbox:SetChecked(MRP_DB.useTomTom)
+    if UnitFactionGroup("player") == "Alliance" then
+        if MRP_DB.parsedSteps_A then
+            MRP.parsedSteps = MRP_DB.parsedSteps_A
+            MRP.currentIndex = MRP_DB.currentIndex_A or 1
+            MRP_CheckCurrentStepComplete(false)
+        end
+    else
+        if MRP_DB.parsedSteps_H then
+            MRP.parsedSteps = MRP_DB.parsedSteps_H
+            MRP.currentIndex = MRP_DB.currentIndex_H or 1
+            MRP_CheckCurrentStepComplete(false)
+        end
+    end
+end)

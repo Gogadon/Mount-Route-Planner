@@ -16,7 +16,6 @@ MRP.L = {
     ["This will create waypoints for each step in your route."] = "Dies erstellt Wegpunkte für jeden Schritt in Ihrer Route.",
     ["You must have TomTom installed for this to work."] = "TomTom muss installiert sein, damit dies funktioniert.",
     ["You can toggle this setting at any time."] = "Du kannst diese Einstellung jederzeit umschalten.",
-    ["Note: TomTom will print messages in chat occasionally."] = "Hinweis: TomTom wird gelegentlich Nachrichten im Chat ausgeben.",
 
     ["|cff00ff00[MRP]|r TomTom usage is now: %s"] = "|cff00ff00[MRP]|r TomTom Nutzung ist jetzt: %s",
     ["|cff00ff00ENABLED|r"] = "|cff00ff00AKTIVIERT|r",
@@ -97,6 +96,7 @@ MRP.L = {
     ["Unknown action: '%s', please report it."] = "Unbekannte Aktion: '%s', bitte melde es.",
 
     ["Map ID not found for: '%s', please report it."] = "Map ID nicht gefunden für: '%s', bitte melde es.",
+    ["Failed to add TomTom waypoint for: '%s', please report it."] = "Fehler beim Hinzufügen des TomTom-Wegpunkts für: '%s', bitte melde es.",
     ["Invalid map ID for: '%s', please report it."] = "Ungültige Map ID für: '%s', bitte melde es.",
     ["Invalid coordinates for: '%s', please report it."] = "Ungültige Koordinaten für: '%s', bitte melde es.",
     ["Cannot set waypoint on map: '%s', please report it."] = "Kann keinen Wegpunkt auf der Karte setzen: '%s', bitte melde es.",
