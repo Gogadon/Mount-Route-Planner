@@ -21,10 +21,12 @@
 ## Category-zhCN: 战团藏品
 ## Category-zhTW: 戰隊收藏
 
-## X-Localizations: enUS, enGB
+## X-Localizations: enUS, enGB, deDE, ruRU
 ## X-CompatibleLocales: enUS, enGB, deDE, frFR, esES, esMX, itIT, ptBR, ruRU, koKR, zhCN, zhTW
 
 MRP_Locale.enUS.lua
+MRP_Locale.deDE.lua
+MRP_Locale.ruRU.lua
 
 MRP_DB.lua
 MRP_Data.lua

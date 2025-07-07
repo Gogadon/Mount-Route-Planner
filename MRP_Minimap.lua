@@ -1,5 +1,7 @@
-MRP = MRP or {}
-MRP.UI = MRP.UI or {}
+-- MRP_Minimap.lua
+local _, MRP = ...
+
+local L = MRP.L
 
 local button = CreateFrame("Button", "MRPMinimapButton", Minimap)
 button:SetSize(28, 28)

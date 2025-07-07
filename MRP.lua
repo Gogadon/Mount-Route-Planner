@@ -1,7 +1,7 @@
-MRP = MRP or {}
-MRP.Data = MRP.Data or {}
-MRP.UI = MRP.UI or {}
-MRP.Parser = MRP.Parser or {}
+-- MRP.lua
+local _, MRP = ...
+
+local L = MRP.L
 
 function MRP_Clear()
     MRP.parsedSteps = {}
@@ -32,7 +32,6 @@ function MRP_Parse(text)
     end
 
     MRP_NextStep()
-
 end
 
 function MRP_PreviousStep()
@@ -66,9 +65,9 @@ function MRP_NextStep()
     repeat
         MRP.currentIndex = MRP.currentIndex + 1
         local step = MRP.parsedSteps[MRP.currentIndex]
-    until not ( MRP_DB.autoSkip
-             and step
-             and MRP_ShouldSkipStep(step) )
+    until not (MRP_DB.autoSkip
+            and step
+            and MRP_ShouldSkipStep(step))
 
     if UnitFactionGroup("player") == "Alliance" then
         MRP_DB.currentIndex_A = MRP.currentIndex
@@ -104,23 +103,94 @@ local specialMountIds = {
     ["Yellow Qiraji Crystal"] = 119,
     ["Green Qiraji Crystal"] = 120,
     ["Fiery Warhorse's Reins"] = 168,
+    ["Ashes of Al'ar"] = 183,
+    ["Raven Lord"] = 185,
+    ["Swift White Hawkstrider"] = 213,
+    ["Azure Drake"] = 246,
+    ["Blue Drake"] = 247,
+    ["Bronze Drake"] = 248,
+    ["Twilight Drake"] = 250,
+    ["Black Drake"] = 253,
+    ["Blue Proto-Drake"] = 264,
+    ["Mimiron's Head"] = 304,
+    ["Onyxian Drake"] = 349,
     ["Invincible's Reins"] = 363,
+    ["Drake of the North Wind"] = 395,
+    ["Drake of the South Wind"] = 396,
+    ["Vitreous Stone Drake"] = 397,
+    ["Armored Razzashi Raptor"] = 410,
+    ["Swift Zulian Panther"] = 411,
     ["Egg of Millagazor"] = 415,
+    ["Amani Battle Bear"] = 419,
+    ["Flametalon of Alysrazor"] = 425,
+    ["Blazing Drake"] = 442,
+    ["Life-Binder's Handmaiden"] = 444,
+    ["Experiment 12-B"] = 445,
     ["Reins of the Heavenly Onyx Cloud Serpent"] = 473,
     ["Reins of the Astral Cloud Serpent"] = 478,
     ["Son of Galleon's Saddle"] = 515,
+    ["Spawn of Horridon"] = 531,
     ["Reins of the Cobalt Primordial Direhorn"] = 533,
     ["Reins of the Thundering Cobalt Cloud Serpent"] = 542,
+    ["Clutch of Ji-Kun"] = 543,
+    ["Kor'kron Juggernaut"] = 559,
+    ["Ironhoof Destroyer"] = 613,
     ["Fiendish Hellfire Core"] = 633,
+    ["Solar Spirehawk"] = 634,
+    ["Felsteel Annihilator"] = 751,
+    ["Infinite Timereaver"] = 781,
     ["Living Infernal Core"] = 791,
     ["Midnight's Eternal Reins"] = 875,
+    ["Smoldering Ember Wyrm"] = 883,
+    ["Abyss Worm"] = 899,
+    ["Shackled Ur'zul"] = 954,
+    ["Antoran Charhound"] = 971,
     ["Sharkbait's Favorite Crackers"] = 995,
     ["Mummified Raptor Skull"] = 1040,
-    ["Underrot Crawg Harness"] = 1053
+    ["Underrot Crawg Harness"] = 1053,
+    ["G.M.O.D."] = 1217,
+    ["Glacial Tidestorm"] = 1219,
+    ["Aerial Unit R-21/X"] = 1227,
+    ["Mechagon Peacekeeper"] = 1252,
+    ["Ny'alotha Allseer"] = 1293,
+    ["Marrowfang"] = 1406,
+    ["Vengeance"] = 1471,
+    ["Cartel Master's Gearglider"] = 1481,
+    ["Sanctum Gloomcharger"] = 1500,
+    ["Zereth Overseer"] = 1587,
+    ["Anu'relos, Flame's Guidance"] = 1818,
+    ["Stonevault Mechsuit"] = 2119,
+    ["Wick"] = 2204,
+    ["Sureki Skyrazor"] = 2219,
+    ["Ascendant Skyrazor"] = 2223,
+    ["The Big G"] = 2487,
+    ["Prototype A.S.M.R."] = 2507
+}
+
+local specialFactionMountIds = {
+    ["Alliance"] = {
+        ["Grand Black War Mammoth"] = 286,
+    },
+    ["Horde"] = {
+        ["Grand Black War Mammoth"] = 287
+    }
 }
 
 local mountIconCache = {}
 local mountMissingReportedCache = {}
+
+function MRP_GetSpecialMountId(name)
+    if specialMountIds[name] then
+        return specialMountIds[name]
+    end
+
+    local faction = UnitFactionGroup("player")
+    if faction and specialFactionMountIds[faction] and specialFactionMountIds[faction][name] then
+        return specialFactionMountIds[faction][name]
+    end
+
+    return nil
+end
 
 function MRP_GetMountIconByName(name)
     if not name then return nil end
@@ -129,8 +199,9 @@ function MRP_GetMountIconByName(name)
         return mountIconCache[name]
     end
 
-    if specialMountIds[name] then
-        local icon = select(3, C_MountJournal.GetMountInfoByID(specialMountIds[name]))
+    local specialMountId = MRP_GetSpecialMountId(name)
+    if specialMountId then
+        local icon = select(3, C_MountJournal.GetMountInfoByID(specialMountId))
         if icon then
             mountIconCache[name] = icon
             return icon
@@ -141,7 +212,7 @@ function MRP_GetMountIconByName(name)
 
     for i = 1, #mountIds do
         local mountName, _, icon = C_MountJournal.GetMountInfoByID(mountIds[i])
-        if mountName and (mountName == name or mountName:lower():find(name:lower()))  then
+        if mountName and (mountName == name or mountName:lower():find(name:lower())) then
             mountIconCache[name] = icon
             return icon
         end
@@ -159,15 +230,16 @@ end
 function MRP_GetMountCollectedByName(name)
     if not name then return nil end
 
-    if specialMountIds[name] then
-        return select(11, C_MountJournal.GetMountInfoByID(specialMountIds[name]))
+    local specialMountId = MRP_GetSpecialMountId(name)
+    if specialMountId then
+        return select(11, C_MountJournal.GetMountInfoByID(specialMountId))
     end
 
     local mountIds = C_MountJournal.GetMountIDs()
 
     for i = 1, #mountIds do
         local mountName, _, _, _, _, _, _, _, _, _, collected = C_MountJournal.GetMountInfoByID(mountIds[i])
-        if mountName and (mountName == name or mountName:lower():find(name:lower()))  then
+        if mountName and (mountName == name or mountName:lower():find(name:lower())) then
             return collected
         end
     end
@@ -191,8 +263,8 @@ function MRP_IsBossDead(boss, instance)
             if instanceName and locked and instanceName:lower():find(instanceNameTarget) then
                 local numEncounters = select(9, GetSavedInstanceInfo(i))
                 for j = 1, numEncounters do
-                    local boss, _, isKilled = GetSavedInstanceEncounterInfo(i, j)
-                    if boss and (boss == bossName or boss:lower():find(bossName)) then
+                    local encounterName, _, isKilled = GetSavedInstanceEncounterInfo(i, j)
+                    if encounterName and (encounterName == bossName or encounterName:lower() == bossName) then
                         return isKilled
                     end
                 end
@@ -201,8 +273,8 @@ function MRP_IsBossDead(boss, instance)
     end
 
     for i = 1, GetNumSavedWorldBosses() do
-        local name = GetSavedWorldBossInfo(i)
-        if name and (name == bossName or name:lower():find(bossName)) then
+        local worldBossName = GetSavedWorldBossInfo(i)
+        if worldBossName and (worldBossName == bossName or worldBossName:lower() == bossName) then
             return true
         end
     end
@@ -224,7 +296,7 @@ function MRP_IsCorrectDifficulty(neededDiffString)
         end
 
         if not selectedDiffID or selectedDiffID == 0 then
-            selectedDiffID = GetLegacyRaidDifficulty()
+            selectedDiffID = GetLegacyRaidDifficultyID()
         end
 
         return MRP_MatchesDifficulty(neededDiffString, selectedDiffID)
@@ -291,7 +363,7 @@ function MRP_ShouldSkipStep(step)
         return allImportantDead
     elseif step.item or step.flyTo or step.flightPath or step.portal or step.walkTo or step.teleport or step.hearthstone then
         return inZone(step.item or step.flyTo or step.flightPath or step.portal or step.walkTo or step.teleport or
-                          step.hearthstone)
+            step.hearthstone)
     end
 
     return false
@@ -301,7 +373,7 @@ function MRP_CheckCurrentStepComplete(force)
     if MRP.parsedSteps == nil or #MRP.parsedSteps == 0 then
         return
     end
-    
+
     local step = MRP.parsedSteps[MRP.currentIndex]
     if step and (force or (MRP_DB.autoAdvance and MRP_ShouldSkipStep(step))) then
         MRP_NextStep()
@@ -394,18 +466,14 @@ SlashCmdList["MOUNTROUTEPLANNER"] = function(msg)
 
     if not cmd or cmd == "" then
         MRP.UI:ShowHide()
-
     elseif cmd == "reset" then
         MRP_Clear()
-
     elseif cmd == "settings" then
         MRP_OpenSettings()
-
     elseif cmd == "tomtom" and (arg1 == "on" or arg1 == "off") then
         MRP_DB = MRP_DB or {}
         MRP_DB.useTomTom = (arg1 == "on")
         print(string.format(L["|cff00ff00[MRP]|r TomTom usage is now: %s"], (MRP_DB.useTomTom and L["|cff00ff00ENABLED|r"] or L["|cffff0000DISABLED|r"])))
-
     else
         print(L["|cffffd200Usage:|r"])
         print(L[" - /mrp → Toggle Mount Route Planner UI"])

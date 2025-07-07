@@ -1,4 +1,8 @@
-MRP = MRP or {}
+-- MRP_Parser.lua
+local _, MRP = ...
+
+local L = MRP.L
+
 local Parser = {}
 MRP.Parser = Parser
 
@@ -45,28 +49,28 @@ function Parser:ParseSteps(text)
             local last_end = 1
             local s, e = string.find(action, "%s+and%s+", last_end)
             while s do
-            local part = string.sub(action, last_end, s - 1)
-            table.insert(parts, part)
-            last_end = e + 1
-            s, e = string.find(action, "%s+and%s+", last_end)
+                local part = string.sub(action, last_end, s - 1)
+                table.insert(parts, part)
+                last_end = e + 1
+                s, e = string.find(action, "%s+and%s+", last_end)
             end
             table.insert(parts, string.sub(action, last_end))
 
             local newParts = {}
             for _, part in ipairs(parts) do
-            local sub_last_end = 1
-            local sub_s, sub_e = string.find(part, ",%s*then%s+", sub_last_end)
-            if sub_s then
-                while sub_s do
-                local sub_part = string.sub(part, sub_last_end, sub_s - 1)
-                table.insert(newParts, sub_part)
-                sub_last_end = sub_e + 1
-                sub_s, sub_e = string.find(part, ",%s*then%s+", sub_last_end)
+                local sub_last_end = 1
+                local sub_s, sub_e = string.find(part, ",%s*then%s+", sub_last_end)
+                if sub_s then
+                    while sub_s do
+                        local sub_part = string.sub(part, sub_last_end, sub_s - 1)
+                        table.insert(newParts, sub_part)
+                        sub_last_end = sub_e + 1
+                        sub_s, sub_e = string.find(part, ",%s*then%s+", sub_last_end)
+                    end
+                    table.insert(newParts, string.sub(part, sub_last_end))
+                else
+                    table.insert(newParts, part)
                 end
-                table.insert(newParts, string.sub(part, sub_last_end))
-            else
-                table.insert(newParts, part)
-            end
             end
             parts = newParts
         end
@@ -81,34 +85,38 @@ function Parser:ParseSteps(text)
     end
 
     for _, line in ipairs(lines) do
-        local num, action = line:match("^(%d+)%s+(.+)$")
-        if num and not action:find("^Man,") then
-            current = {
-                actions = splitActions(self:GetRacialText(action)),
-                rewards = {}
-            }
-            lastReward = nil
-            bossesCount = 0
-            notesCount = 0
-            table.insert(raw, current)
-        elseif current then
-            local boss, mount = line:match("^(%S.-)%s%s+(%S.-)%s*$")
-            if boss and mount then
-                lastReward = {
-                    boss = boss,
-                    mount = mount,
-                    note = ""
+        -- if the line is like '482 / 1095 (45%)' then skip it
+        if not line:find("^%d+%s*/%s*%d+%s*%(%d+%%%)$") then
+            local num, action = line:match("^(%d+)%s+(.+)$")
+            if num and not action:find("^Man,") then
+                current = {
+                    actions = splitActions(self:GetRacialText(action)),
+                    rewards = {},
+                    rawRewardNotes = {},
                 }
-                table.insert(current.rewards, lastReward)
-                bossesCount = bossesCount + 1
-            else
-                local txt = line:match("%S.*") or ""
-                if current.rewards and #current.rewards > 0 then
-                    current.rewards[notesCount + 1].note = txt
+                lastReward = nil
+                bossesCount = 0
+                notesCount = 0
+                table.insert(raw, current)
+            elseif current then
+                local boss, mount = line:match("^(%S.-)%s%s+(%S.-)%s*$")
+                if boss and mount then
+                    lastReward = {
+                        boss = boss,
+                        mount = mount,
+                        note = ""
+                    }
+                    table.insert(current.rewards, lastReward)
+                    bossesCount = bossesCount + 1
                 else
-                    current.note = self:GetRacialText(txt)
+                    local txt = line:match("%S.*") or ""
+                    if current.rewards and #current.rewards > 0 then
+                        table.insert(current.rawRewardNotes, txt)
+                    else
+                        current.note = self:GetRacialText(txt)
+                    end
+                    notesCount = notesCount + 1
                 end
-                notesCount = notesCount + 1
             end
         end
     end
@@ -126,6 +134,21 @@ function Parser:ParseSteps(text)
             end
             if #entry.rewards > 0 then
                 s.rewards = entry.rewards
+            end
+            if #entry.rawRewardNotes > 0 then
+                local noteOffset = 0
+
+                -- on firefox we get 1 more note than rewards
+                if #entry.rawRewardNotes == #entry.rewards + 1 then
+                    noteOffset = 1
+                end
+
+                -- copy raw reward notes to rewards
+                for i, reward in ipairs(entry.rewards) do
+                    if entry.rawRewardNotes[i + noteOffset] then
+                        reward.note = entry.rawRewardNotes[i + noteOffset]
+                    end
+                end
             end
             table.insert(steps, s)
             id = id + 1

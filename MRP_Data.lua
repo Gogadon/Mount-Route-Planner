@@ -1,4 +1,6 @@
-MRP = MRP or {}
+-- MRP_Data.lua
+local _, MRP = ...
+
 local Data = {}
 MRP.Data = Data
 

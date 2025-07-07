@@ -1,3 +1,4 @@
+-- MRP_Prefills.lua
 local alliance = nil
 local horde = nil
 
@@ -271,7 +272,7 @@ function MRP_GetAlliancePrefill()
         a = a .. "\n"
         alliance = a
     end
-    
+
     return alliance
 end
 
@@ -561,6 +562,6 @@ function MRP_GetHordePrefill()
         h = h .. "\n"
         horde = h
     end
-    
+
     return horde
 end

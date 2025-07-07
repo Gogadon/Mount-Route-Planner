@@ -1,5 +1,8 @@
-MRP_DB = MRP_DB or {}
-MRP = MRP or {}
+-- MRP_UI.lua
+local _, MRP = ...
+
+local L = MRP.L
+
 local UI = {}
 MRP.UI = UI
 
@@ -237,7 +240,7 @@ helpBtn:SetScript("OnClick", function()
             self:GetParent():Hide()
         end,
     }
-    
+
     StaticPopup_Show("MOUNT_ROUTE_PLANNER_HELP")
 end)
 
@@ -283,21 +286,38 @@ animFrame:SetScript("OnUpdate", function(self, elapsed)
     end
 end)
 
+local knownItemIds = {
+    ["Hearthstone"] = 6948,
+    ["Garrison Hearthstone"] = 110560,
+    ["Dalaran Hearthstone"] = 140192,
+}
+
+local itemMissingReportedCache = {}
+
 function UI:ShowCenterUseItemButton(itemName)
     local btn = centerAction
 
-    btn.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
-
-    local itemID = select(1, GetItemInfoInstant(itemName))
-    if itemID then
-        local _, _, _, _, _, _, _, _, _, icon = GetItemInfo(itemID)
-        if icon then
-            btn.icon:SetTexture(icon)
-        end
+    local itemID = select(1, C_Item.GetItemInfoInstant(itemName))
+    if not itemID and knownItemIds[itemName] then
+        itemID = knownItemIds[itemName]
     end
 
-    btn:SetAttribute("macrotext", "/use " .. itemName)
-    btn:Show()
+    if itemID then
+        local name, _, _, _, _, _, _, _, _, icon = C_Item.GetItemInfo(itemID)
+        if name then
+            if icon then
+                btn.icon:SetTexture(icon)
+            else
+                btn.icon:SetTexture("Interface\\Icons\\INV_Misc_QuestionMark")
+            end
+
+            btn:SetAttribute("macrotext", "/use " .. name)
+            btn:Show()
+        end
+    elseif not itemMissingReportedCache[itemName] then
+        itemMissingReportedCache[itemName] = true
+        print("|cffffcc00[MRP]|r " .. format(L["Item not found: '%s', please report it."], itemName))
+    end
 end
 
 function UI:HideCenterAction()
@@ -318,7 +338,7 @@ function UI:UpdateDisplay()
     local idx = MRP.currentIndex or 1
     local step = steps[idx]
 
-    MRP.UI:HideCenterAction()
+    self:HideCenterAction()
 
     if MRP_DB.useTomTom and SlashCmdList.TOMTOM_WAY then
         local currentZoneName = GetZoneText()
@@ -391,14 +411,14 @@ function UI:UpdateDisplay()
         frame.stepText:SetText(format(L["Kill %s"], step.npc))
     elseif step.item then
         frame.stepText:SetText(format(L["Use %s"], step.item))
-        MRP.UI:ShowCenterUseItemButton(step.item)
+        self:ShowCenterUseItemButton(step.item)
     elseif step.flyTo then
         frame.stepText:SetText(format(L["Fly to %s"], step.flyTo))
     elseif step.portal then
         frame.stepText:SetText(format(L["Take Portal to %s"], step.portal))
     elseif step.hearthstone then
         frame.stepText:SetText(format(L["Use Hearthstone to %s"], step.hearthstone))
-        MRP.UI:ShowCenterUseItemButton("Hearthstone")
+        self:ShowCenterUseItemButton("Hearthstone")
 
         if GetBindLocation() ~= step.hearthstone then
             warningText = L["Your Hearthstone is set to a different location!"]
@@ -422,7 +442,7 @@ function UI:UpdateDisplay()
             if locX < 1 then
                 locX = locX * 100
             end
-            
+
             local locY = step.location.y
             if locY < 1 then
                 locY = locY * 100
@@ -468,7 +488,7 @@ function UI:UpdateDisplay()
             end
         end
     end
-    
+
     local totalIconsForStep = 0
     for _, r in ipairs(step.rewards or {}) do
         if r.boss and r.mount then
@@ -500,6 +520,7 @@ function UI:UpdateDisplay()
             icon:SetDesaturated(isDead or isCollected)
 
             icon:SetScript("OnEnter", function()
+                ---@diagnostic disable-next-line: param-type-mismatch
                 GameTooltip:SetOwner(icon, "ANCHOR_RIGHT")
                 GameTooltip:AddLine(reward.boss or L["Unknown Boss"], 1, 1, 1)
                 if reward.note then
